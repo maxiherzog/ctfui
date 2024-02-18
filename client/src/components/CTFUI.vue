@@ -146,7 +146,7 @@ export default {
   },
   mounted() {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+    
 
     this.respawnInterval = setInterval(() => {
       var played = false;

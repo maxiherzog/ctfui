@@ -1,3 +1,4 @@
+const { deepStrictEqual } = require('assert');
 const { Socket } = require('socket.io');
 
 const Express = require('express')();
@@ -18,7 +19,7 @@ var ticketDecay = 1;
 const buchstaben = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 
 var tickets = [100, 100]; // TODO
-
+var disconnected_ids = [];
 var previousFlags = [];
 var flags = [];
 
@@ -72,6 +73,17 @@ Socketio.on('connection', socket => {
     // send flags to client
     socket.emit("flags", flags);
     socket.emit("tickets", tickets);
+
+    socket.on("namechange", (old_id) => {
+        console.log("namechange", socket.id, "->", old_id);
+        for (let i=0; i < disconnected_ids.length; i++){
+            if (disconnected_ids.id == old_id) {
+                console.log("\t found flag:", disconnected_ids.flag_id);
+                flags[disconnected_ids.flag_id].players.push(socket.id);
+                disconnected_ids.splice(i, 1);
+            }
+        }
+    });
 
     // stuff for lobby
     socket.on("ready", (ready) => {
@@ -214,6 +226,7 @@ Socketio.on('connection', socket => {
         // remove player from flags
         for (let i = 0; i < amountOfFlags; i++) {
             if (flags[i].players.includes(socket.id)) {
+                disconnected_ids.push({flag_id: i, id: socket.id})
                 flags[i].players.splice(flags[i].players.indexOf(socket.id), 1);
             }
         }
