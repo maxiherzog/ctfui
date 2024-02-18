@@ -21,6 +21,13 @@ export const socket = io('http://localhost:3000', {
 }});
 
 socket.on("connect", () => {
+  if(localStorage.id == null) {
+    localStorage.id = socket.id;
+  } else {
+    socket.emit("namechange", localStorage.id)
+    localStorage.id = socket.id;
+  }
+  
   state.connected = true;
 });
 

@@ -1,7 +1,7 @@
 <template>
   <div class="my-4">
     <h1>Capture The Flag</h1>
-    {{  my_flag }}
+    <!-- {{  my_flag }} -->
     <div class="d-flex justify-content-center my-3">
       <BButton
         id="checkbox-1"
@@ -14,14 +14,17 @@
       <BButton @click="restartModal = true">Einstellungen</BButton>
     </div>
 
-    <BCardGroup deck class="d-flex justify-content-center">
+    <BCardGroup deck>
       <BCard
         v-for="flag in flags"
         v-bind:key="flag.letter"
         :class="{ me: flag.letter == my_flag, ready: flag.ready }"
-        style="max-width: 5rem"
+        style="max-width: 30rem"
       >
         <BCardTitle class="text-center">{{ flag.letter }}</BCardTitle>
+        <BCardText class="text-center">
+          {{ flag.players }}
+        </BCardText>
       </BCard>
     </BCardGroup>
     <p class="text-center my-3">
@@ -99,7 +102,7 @@ export default {
     return {
       restartModal: false,
       countdown: 10,
-      form_flagAmount: 1,
+      form_flagAmount: 3,
       form_startingTickets: 100,
       form_respawnTime: 10,
       form_captureTime: 10,

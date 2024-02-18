@@ -2,29 +2,64 @@
   <div class="ui">
     
     <!-- <h1>Tickets:</h1> -->
-    <BProgress height="80px">
+    <BProgress height="50px">
       <BProgressBar :value="value_blue" :max="100" variant="primary"><h1>Blau {{tickets[0]}}</h1></BProgressBar>
       <BProgressBar :value="value_red" :max="100" variant="danger"><h1>Rot {{tickets[1]}}</h1></BProgressBar>
     </BProgress>
     <!-- <br> -->
-    <div v-for="flag in flags" v-bind:key="flag.letter" :class="{me: flag.letter==my_flag, flag: true}">
-      {{flag.letter}}: {{flag.status}}
-      <BProgress 
+
+    <h1 class="my-flag">
+      {{ my_flag }}
+    </h1>
+    <div class="d-flex justify-content-center">
+      <BProgress class="progress-my-flag"
+          :variant="getFlagStatus() < 0 ? 'danger' : ''" 
+          :value="Math.abs(getFlagStatus())" 
+          :animated="capturing">
+      </BProgress>
+    </div>
+    
+
+    <br>
+    <div class="d-flex justify-content-center">
+      <BButton :disabled="getFlagStatus()==100" class="capture-button" variant="primary" @click="capture(+1)">Capture Blue</BButton>
+      <BButton :disabled="getFlagStatus()==-100" class="capture-button" variant="danger" @click="capture(-1)">Capture Red</BButton>
+    </div>
+    <div class="d-flex justify-content-center my-auto">
+      <BButton class="respawn-button" @click="respawn" :disabled="capturing">Respawn</BButton>
+    </div>
+
+    <BBadge v-for="respawn in respawns" :key="respawn.id" variant="warning">{{respawn.id}}: {{ respawn.time_left }}</BBadge><br>
+    <!-- <BButton @click="backToLobby">Spiel neustarten</BButton>
+     -->
+
+  <BCardGroup class="row row-cols-3">
+    <BCard
+      v-for="flag in flags"
+      v-bind:key="flag.letter"
+      :class="{ me: flag.letter == my_flag, flag: true }"
+    >
+      <BCardTitle class="text-center">{{ flag.letter }}</BCardTitle>
+      <BCardText class="text-center">
+        <BProgress
         class="progress-flag"
         :variant="flag.status < 0 ? 'danger' : ''" 
         :value="Math.abs(flag.status)" 
-        width="100%"
-        :animated="capturing">
+        width="100%">
       </BProgress>
+      </BCardText>
+    </BCard>
+  </BCardGroup>
 
-    </div>
-    <br>
-    <BButton variant="danger" @click="capture(-1)">Capture Red</BButton>
-    <BButton variant="primary" @click="capture(+1)">Capture Blue</BButton><br>
-    <BButton @click="respawn" :disabled="capturing">Respawn</BButton>
 
-    <BBadge v-for="respawn in respawns" :key="respawn.id" variant="warning">{{respawn.id}}: {{ respawn.time_left }}</BBadge><br>
-    <BButton @click="backToLobby">Spiel neustarten</BButton>
+    <BButton @click="SafetyModal = true">Spiel neustarten</BButton>
+    <BModal
+      v-model="SafetyModal"
+      title="Bist du sicher?"
+      @ok="backToLobby"
+    >
+      <p>Willst du das Spiel wirklich neustarten?</p>
+    </BModal>
     </div>
 </template>
 
@@ -48,6 +83,7 @@ export default {
       respawns: [],
       respawn_counter: 0,
       capturing: false,
+      SafetyModal: false,
     }
   },
   computed: {
@@ -70,7 +106,7 @@ export default {
         }
       }
       if (status == 100 || status == -100) {
-        this.respawns.push({id: this.respawn_counter, time_left: 10});
+        this.respawns.push({id: this.respawn_counter, time_left: this.settings.respawnTime});
         this.respawn_counter++;
         // resume audio context
         // audioContext.resume().then(() => {
@@ -80,13 +116,22 @@ export default {
 
       
     },
-
+    backToLobby() {
+      socket.emit('backToLobby')
+    },
     click() {
       socket.emit('click')
     },
     restartGame() {
       socket.emit('restart', this.rangeValue)
       // this.restartModal = false
+    },
+    getFlagStatus() {
+      for (let i = 0; i < this.flags.length; i++) {
+        if (this.flags[i].players.includes(socket.id)) {
+          return this.flags[i].status;
+        }
+      }
     },
     capture(direction) {
       // create a loop that increases the flag status by 1 every 10 ms
@@ -119,7 +164,7 @@ export default {
           this.capturing = false;
         }
         socket.emit('capture', status)
-      }, 100)
+      }, 100*this.settings.captureTime/10)
     }
   },
   setup() {
@@ -140,8 +185,10 @@ export default {
       }
     },
     tickets: function(newVal) {
-      this.value_blue = Math.round(newVal[0]/(newVal[0]+newVal[1])*100)
-      this.value_red = Math.round(newVal[1]/(newVal[0]+newVal[1])*100)
+      var b = parseInt(newVal[0])
+      var r = parseInt(newVal[1])
+      this.value_blue = b / (b + r) * 100
+      this.value_red = r / (b + r) * 100
     }
   },
   mounted() {
@@ -188,7 +235,41 @@ export default {
   background-color: rgb(248, 214, 214);
 }
 
-.progress-flag {
-  transition: none !important;
+.flag {
+  /* width: 30%; */
+  border: none !important;
 }
+
+.respawn-button {
+  height: 80px;
+  width: 100%;
+  font-size: 1.5rem !important;
+}
+
+.capture-button {
+  height: 80px;
+  width: 50%;
+  font-size: 1.5rem !important;
+}
+
+.progress-my-flag {
+  --bs-progress-bar-transition: width 0.05s ease !important;
+  width: 50% !important;
+}
+
+.my-flag {
+  text-align: center;
+  font-size: 8rem;
+  margin: 0;
+  padding: 0;
+
+}
+.progress-flag {
+  --bs-progress-bar-transition: width 0.05s ease !important;
+}
+
+.card-body{
+  padding: 3px !important;
+}
+
 </style>
